@@ -19,19 +19,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y aria2 libusb-1.0-0-dev clang lld
-          sudo apt remove -y libssl-dev libusb-1.0-0-dev
-
-          aria2c https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2
-          tar -xf libusb-1.0.30.tar.bz2
-          cd libusb-1.0.30
-          ./configure --disable-shared --enable-static --disable-udev LDFLAGS="-static"
-          make -j$(nproc)
-          sudo make install
-          cd ..
+          sudo apt install -y libusb-1.0-0-dev
 
       - name: Build ipwnder
-        run: make -j$(nproc) LDFLAGS="-L/usr/local/lib -fuse-ld=lld" CC=clang LIBS="-ldl -lusb-1.0 -pthread -lcrypto"
+        run: make
 
       - name: Zip ipwnder
         run: zip -r ipwnder_linux-${{ matrix.arch.name }}.zip pwnedDFU
