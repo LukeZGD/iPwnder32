@@ -305,6 +305,11 @@ static long get_nanos(void) {
     return (long)ts.tv_sec * 1000000000L + ts.tv_nsec;
 }
 
+// keeping track of async transfers
+static volatile int async_transfer_done = 0;
+static void async_transfer_cb(struct libusb_transfer* transfer) {
+    async_transfer_done = 1;
+}
 
 int usb_async_ctrl_transfer(usb_device_t device, uint8_t bm_request_type, uint8_t b_request, uint16_t w_value, uint16_t w_index, unsigned char *data, uint16_t w_length, float timeout) {
     int ret;
@@ -312,22 +317,35 @@ int usb_async_ctrl_transfer(usb_device_t device, uint8_t bm_request_type, uint8_
     unsigned char* buffer = malloc(w_length + 8);
     struct libusb_transfer* transfer = libusb_alloc_transfer(0);
     if(!transfer) {
+        free(buffer);
         return -1;
     }
     memcpy((buffer + 8), data, w_length);
     libusb_fill_control_setup(buffer, bm_request_type, b_request, w_value, w_index, w_length);
-    libusb_fill_control_transfer(transfer, device->handle, buffer, NULL, NULL, 0);
-    transfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER;
+    libusb_fill_control_transfer(transfer, device->handle, buffer, async_transfer_cb, NULL, 0);
+    async_transfer_done = 0;
+    // transfer->flags |= LIBUSB_TRANSFER_FREE_BUFFER; we'll just free it manually
     ret = libusb_submit_transfer(transfer);
     if(ret != 0) {
+        free(buffer);
+        libusb_free_transfer(transfer);
         return -1;
     }
     while((get_nanos() - start) < (timeout * (1000000/*10 * 6*/)));
+    libusb_cancel_transfer(transfer);
+    struct timeval tv = { .tv_sec = 0, .tv_usec = 100000 };
+    while(!async_transfer_done) {
+        libusb_handle_events_timeout(usb_context, &tv);
+    }
+    free(buffer);
+    libusb_free_transfer(transfer);
+    /*
     ret = libusb_cancel_transfer(transfer);
     if(ret != 0) {
         return -1;
     }
     free(buffer);
+    */
     return 0;
 }
 

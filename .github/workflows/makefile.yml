@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.arch.runner }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Install dependencies
         run: |
@@ -22,9 +22,9 @@ jobs:
           sudo apt install -y aria2 libusb-1.0-0-dev clang lld
           sudo apt remove -y libssl-dev libusb-1.0-0-dev
 
-          aria2c https://github.com/libusb/libusb/releases/download/v1.0.28/libusb-1.0.28.tar.bz2
-          tar -xf libusb-1.0.28.tar.bz2
-          cd libusb-1.0.28
+          aria2c https://github.com/libusb/libusb/releases/download/v1.0.30/libusb-1.0.30.tar.bz2
+          tar -xf libusb-1.0.30.tar.bz2
+          cd libusb-1.0.30
           ./configure --disable-shared --enable-static --disable-udev LDFLAGS="-static"
           make -j$(nproc)
           sudo make install
